@@ -144,19 +144,19 @@ function UserRouters() {
             navigation(USER_ROUTES.HOME)
             return USER_ROUTES.HOME
           }}>
-            <SidebarHref><SwatchBook />Home</SidebarHref>
+            <SidebarHref>Home</SidebarHref>
           </SidebarItem>
           <SidebarItem redirect={() => {
             navigation(USER_ROUTES.LOGS)
             return USER_ROUTES.LOGS
           }}>
-            <SidebarHref><FileText />Logs</SidebarHref>
+            <SidebarHref>Logs</SidebarHref>
           </SidebarItem>
           <SidebarItem redirect={() => {
             navigation(ADMIN_ROUTES.CONFIG)
             return ADMIN_ROUTES.CONFIG
           }}>
-            <SidebarHref><Settings />Config</SidebarHref>
+            <SidebarHref>Config</SidebarHref>
           </SidebarItem>
           <ModalContext>
             <div className="flex-1 flex items-end w-full">

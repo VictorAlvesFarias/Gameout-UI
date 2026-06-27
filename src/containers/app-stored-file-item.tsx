@@ -22,8 +22,6 @@ function AppStoredFileItem(x: {
     }
 
     function getProcessingStatusColor(status?: number): string {
-        console.log(x.name)
-
         if (status == 1) {
             return 'text-yellow-400'; // Pending
         }
