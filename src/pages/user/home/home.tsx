@@ -17,7 +17,6 @@ import ModalRoot from '../../../components/modal-root'
 import Checkbox from '../../../components/checkbox'
 import Label from '../../../components/label'
 import Div from '../../../components/div'
-import Form from '../../../components/form'
 
 import { AccordionContext, ModalContext, ModalClose, If } from 'react-base-components'
 import { useQuery } from 'react-toolkit'
@@ -250,7 +249,7 @@ function Home() {
         <ModalRoot>
           <div className='shadow-lg p-6 bg-main-black-800 flex flex-col gap-3 rounded text-white'>
             <h3 className='text-lg font-semibold'>Add New Group</h3>
-            <Form onSubmit={handleAddSubmit(handleAddSave)}>
+            <form onSubmit={handleAddSubmit(handleAddSave)} className='flex flex-col gap-3'>
               <InputRoot>
                 <Label>Name</Label>
                 <InputText {...addRegister("name")} className='w-full' placeholder='Save name' />
@@ -271,7 +270,7 @@ function Home() {
                   <Button type='button' variation='red' className='w-full'>Cancel</Button>
                 </ModalClose>
               </div>
-            </Form>
+            </form>
           </div>
         </ModalRoot>
       </ModalContext>
