@@ -12,8 +12,8 @@ import InputText from '../../../components/input-text';
 import Section from '../../../components/section';
 import { signupService } from '../../../services/signup-service';
 import { USER_ROUTES } from '../../../config/routes-config';
-import Span from '../../../components/Span';
-import Form from '../../../components/Form';
+import Span from '../../../components/span';
+import Form from '../../../components/form';
 import Div from '../../../components/div';
 import { toast } from 'react-toastify';
 

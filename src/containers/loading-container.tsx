@@ -1,6 +1,6 @@
 import React from 'react'
 import { usePageContext } from '../contexts/page-context';
-import Span from '../components/Span';
+import Span from '../components/span';
 import { LoaderCircle } from 'lucide-react';
 
 function LoadingContainer() {

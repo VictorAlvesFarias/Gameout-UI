@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { Trash } from 'lucide-react';
 import Button from '../../../components/button';
 import InputText from '../../../components/input-text';
-import Span from '../../../components/Span';
+import Span from '../../../components/span';
 import Accordion from "../../../components/accordion";
 import AccordionRoot from '../../../components/accordion-root';
 import AccordionTitle from '../../../components/accordion-title';

@@ -5,10 +5,10 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Link, useNavigate } from 'react-router-dom'
 import { LoaderCircle, LockOpen, LucideCheck } from 'lucide-react'
 import { AuthContext } from 'react-toolkit'
-import Form from '../../../components/Form';
+import Form from '../../../components/form';
 import Button from '../../../components/button';
 import InputRoot from '../../../components/input-root'
-import Span from '../../../components/Span'
+import Span from '../../../components/span'
 import Label from '../../../components/label'
 import InputText from '../../../components/input-text'
 import Section from '../../../components/section'

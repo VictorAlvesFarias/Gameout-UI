@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, FileText, Trash2, RefreshCcw } from 'lucide-react';
 import Button from '../../../components/button';
-import Span from '../../../components/Span';
+import Span from '../../../components/span';
 import Accordion from '../../../components/accordion';
 import AccordionRoot from '../../../components/accordion-root';
 import AccordionTitle from '../../../components/accordion-title';
