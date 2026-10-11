@@ -28,7 +28,6 @@ import { AUTH } from "../config/auth-config";
 import { loginService } from "../services/login-service";
 import Div from "../components/div";
 import { driverService } from "../services/driver-service";
-import { webSocketService } from "../services/web-socket-service";
 import { usePageContext } from "../contexts/page-context";
 import TitlePage from "../containers/title-page";
 import LoadingContainer from "../containers/loading-container";
@@ -36,64 +35,57 @@ import LoadingContainer from "../containers/loading-container";
 function UserRouters() {
   const cookies = Cookies.get();
   const navigation = useNavigate()
-  const [driverStatus, setDriverStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected')
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false)
+  // The driver reads its groups every minute, so a recent call means it is running.
+  const onlineWindowMs = 3 * 60 * 1000
+  const [driverLastSeen, setDriverLastSeen] = useState<Date | null | undefined>(undefined)
+  const [driverStatusError, setDriverStatusError] = useState(false)
 
   async function checkDriverStatus() {
-    if (isCheckingStatus) {
-      return
-    }
-
-    setIsCheckingStatus(true)
-
     try {
-      const response = await driverService.checkDriverStatus()
+      const response = await driverService.getStatus()
 
-      if (response?.data === true) {
-        setDriverStatus('connected')
-      }
-      else if (response?.data === false) {
-        setDriverStatus('disconnected')
-      }
-      else {
-        setDriverStatus('error')
-      }
+      setDriverStatusError(!response?.data)
+      setDriverLastSeen(response?.data?.lastSeen ? new Date(response.data.lastSeen) : null)
     }
     catch (error) {
-      setDriverStatus('error')
-    }
-    finally {
-      setIsCheckingStatus(false)
+      setDriverStatusError(true)
     }
   }
 
+  function isDriverOnline() {
+    return driverLastSeen != null && Date.now() - driverLastSeen.getTime() < onlineWindowMs
+  }
+
   function getDriverStatusText() {
-    if (driverStatus == 'connected') {
-      return 'Driver is connected'
+    if (driverStatusError) {
+      return 'Driver status unavailable'
     }
-    else if (driverStatus == 'disconnected') {
-      return 'Driver is not connected'
+    else if (driverLastSeen === undefined) {
+      return 'Checking...'
     }
-    else if (driverStatus == 'error') {
-      return 'Connection error'
+    else if (driverLastSeen === null) {
+      return 'Driver never connected'
+    }
+    else if (isDriverOnline()) {
+      return 'Driver is running'
     }
     else {
-      return 'Checking...'
+      return `Driver last seen ${driverLastSeen.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`
     }
   }
 
   function getDriverStatusColor() {
-    if (driverStatus == 'connected') {
+    if (driverStatusError) {
+      return 'text-red-400'
+    }
+    else if (isDriverOnline()) {
       return 'text-green-400'
     }
-    else if (driverStatus == 'disconnected') {
-      return 'text-red-400'
-    }
-    else if (driverStatus == 'error') {
-      return 'text-red-400'
+    else if (driverLastSeen === undefined) {
+      return 'text-gray-400'
     }
     else {
-      return 'text-gray-400'
+      return 'text-zinc-400'
     }
   }
 
@@ -102,17 +94,10 @@ function UserRouters() {
 
     const intervalId = setInterval(() => {
       checkDriverStatus()
-    }, 30000)
-
-    function handleDriveStatusUpdated() {
-      checkDriverStatus()
-    }
-
-    webSocketService.on('DriveStatusUpdated', handleDriveStatusUpdated)
+    }, 60000)
 
     return () => {
       clearInterval(intervalId)
-      webSocketService.off('DriveStatusUpdated', handleDriveStatusUpdated)
     }
   }, [])
 

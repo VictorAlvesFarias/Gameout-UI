@@ -42,6 +42,10 @@ function AppFileItem(x: {
             return 'text-purple-400'; // PathNotFounded
         }
 
+        if (status == 6) {
+            return 'text-orange-400'; // LockedFiles
+        }
+
         return ""
     }
 

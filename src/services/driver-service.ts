@@ -17,8 +17,9 @@ class DriverService extends BaseHttpService {
     }))
   }
 
-  public async checkDriverStatus() {
-    const result = this.post<IBaseHttpResponseApi<boolean>>({ api: env, href: "/driver-is-connected", params: {} }, {})
+  /** When the driver last called the API (UTC); null when it never connected. */
+  public async getStatus() {
+    const result = this.get<IBaseHttpResponseApi<{ lastSeen: string | null }>>({ api: env, href: "/driver-status", params: {} })
 
     return result;
   }

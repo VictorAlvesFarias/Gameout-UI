@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Clock, FileText, Trash2, RefreshCcw } from 'lucide-react';
+import { Clock, Trash2, RefreshCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import Button from '../../../components/button';
 import Span from '../../../components/span';
 import Accordion from '../../../components/accordion';
@@ -13,28 +13,33 @@ import { applicationLogService, } from '../../../services/application-log-servic
 import { usePageContext } from '../../../contexts/page-context';
 import { toast } from 'react-toastify';
 
+const pageSize = 50;
+
 function Logs() {
   const { setContextPage } = usePageContext();
   const [logs, setLogs] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [allRequestsResolved, setQuery] = useQuery(false);
   const [filter, setFilter] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
+
+  const pages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   function handleFilter(e: any) {
     setFilter(e.target.value);
   }
 
-  function handleLogFilter() {
-    return logs.filter(e =>
-      e.message?.includes(filter) ||
-      e.type?.includes(filter) ||
-      e.traceId.toString()?.includes(filter) ||
-      e.userId?.includes(filter)
-    )
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setPage(1);
+    setSearch(filter.trim());
   }
 
   function handleGetLogs() {
-    return applicationLogService.getAllTraces().then(response => {
-      setLogs(response.data);
+    return applicationLogService.getLogs(page, pageSize, search).then(response => {
+      setLogs(response.data?.items ?? []);
+      setTotalCount(response.data?.totalCount ?? 0);
     });
   }
 
@@ -42,7 +47,8 @@ function Logs() {
     setQuery(() =>
       applicationLogService.clearAllLogs().then(() => {
         toast.success('Logs cleared successfully')
-        handleGetLogs()
+        setPage(1)
+        return handleGetLogs()
       }).catch(() => {
         toast.error('Failed to clear logs')
       })
@@ -77,7 +83,7 @@ function Logs() {
 
   useEffect(() => {
     setQuery(() => handleGetLogs());
-  }, []);
+  }, [page, search]);
 
   useEffect(() => {
     setContextPage({ loading: !allRequestsResolved });
@@ -90,10 +96,13 @@ function Logs() {
   return (
     <Div variation='in-start' className=' bg-zinc-900 bg-opacity-50 '>
       <div className='flex gap-3 items-center mb-4'>
-        <InputText onChange={handleFilter} type="text" placeholder='Search traces' variation='ultra-rounded' />
+        <form onSubmit={handleSearch} className='flex gap-3 items-center'>
+          <InputText onChange={handleFilter} type="text" placeholder='Search message, details or trace id' variation='ultra-rounded' />
+        </form>
+        <span className='text-xs text-zinc-400'>{totalCount} log(s)</span>
         <div className='flex gap-3 flex-1 justify-end'>
           <div className='w-11 h-11'>
-            <Button onClick={handleGetLogs} className='w-full'>
+            <Button onClick={() => setQuery(() => handleGetLogs())} className='w-full'>
               <RefreshCcw className='h-4 w-4' />
             </Button>
           </div>
@@ -106,16 +115,16 @@ function Logs() {
       </div>
 
       <If conditional={allRequestsResolved}>
-        <If conditional={handleLogFilter().length === 0}>
+        <If conditional={logs.length === 0}>
           <div className='h-full w-full items-center justify-center flex text-white'>
             <div className='h-full w-full items-center justify-center flex text-white'>
               <Span>Results not found</Span>
             </div>
           </div>
         </If>
-        <If conditional={handleLogFilter().length > 0}>
+        <If conditional={logs.length > 0}>
           <div className='space-y-3'>
-            {handleLogFilter().map(log => (
+            {logs.map(log => (
               <div key={log.id} className='pt-3 rounded flex flex-col relative gap-3'>
                 <AccordionContext>
                   <AccordionRoot>
@@ -172,6 +181,21 @@ function Logs() {
               </div>
             ))}
           </div>
+          <If conditional={totalCount > pageSize}>
+            <div className='flex gap-3 items-center justify-center mt-6 text-white'>
+              <div className='w-11 h-11'>
+                <Button className='w-full' disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                  <ChevronLeft className='h-4 w-4' />
+                </Button>
+              </div>
+              <span className='text-sm text-zinc-400'>Page {page} of {pages}</span>
+              <div className='w-11 h-11'>
+                <Button className='w-full' disabled={page >= pages} onClick={() => setPage(page + 1)}>
+                  <ChevronRight className='h-4 w-4' />
+                </Button>
+              </div>
+            </div>
+          </If>
         </If>
       </If>
     </Div>

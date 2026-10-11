@@ -5,12 +5,20 @@ import { AUTH } from "../config/auth-config";
 interface IApplicationLog {
     id: number;
     message: string;
+    details?: string;
     traceId: number;
     type: string; // Code, Exception, Json, Message, etc
     action: string; // Error, Warning, Success, Info, etc
     createDate: string;
     updateDate: string;
     userId: string;
+}
+
+export interface IPage<T> {
+    items: T[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
 }
 
 interface ITrace {
@@ -77,13 +85,13 @@ class ApplicationLogService extends BaseHttpService {
         }
     }
 
-    public async getAllTraces(page: number = 1, pageSize: number = 50) {
-        const response = await this.get<IBaseHttpResponseApi<ITrace[]>>({
+    /** One page of the application log; the search runs on the server (message, details or trace id). */
+    public async getLogs(page: number = 1, pageSize: number = 50, searchInput: string = '') {
+        const response = await this.get<IBaseHttpResponseApi<IPage<IApplicationLog>>>({
             api: env,
             href: `/api/application-log/traces`,
-            params: { page, pageSize }
+            params: { page, pageSize, searchInput }
         });
-        console.log('getAllTraces raw response:', response);
         return response;
     }
 

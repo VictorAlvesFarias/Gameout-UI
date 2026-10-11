@@ -4,9 +4,6 @@ import { AUTH } from "../config/auth-config";
 import { IAppFileRequest } from "../interfaces/IAppFileRequest";
 import { IAppFileResponse } from "../interfaces/IAppFileResponse";
 import { IAppStoredFileResponse } from "../interfaces/IAppStoredFileResponse";
-import { ICheckAppFileStatusRequest } from "../interfaces/ICheckAppFileStatusRequest";
-import { ICheckAppStoredFileStatusRequest } from "../interfaces/ICheckAppStoredFileStatusRequest";
-import { IAppFileSyncRequest } from "../interfaces/IAppFileSyncRequest";
 
 class SaveService extends BaseHttpService {
     constructor() {
@@ -62,17 +59,6 @@ class SaveService extends BaseHttpService {
         return response
     }
 
-    public async singleSync(request: IAppFileSyncRequest) {
-        const response = this.post<IBaseHttpResponseApi<any>>({ api: env, href: "/single-sync" }, request)
-        return response
-    }
-
-    public async getById(params: any) {
-        const response = await this.get<IBaseHttpResponseApi<IAppFileResponse>>({ api: env, href: "/get-email-address-by-id", params: params })
-
-        return response
-    }
-
     public async download(params: any, name: string) {
         console.log("Downloading file with params:", params);
 
@@ -94,26 +80,6 @@ class SaveService extends BaseHttpService {
             console.error("Download error:", error)
             throw error
         }
-    }
-
-    public async reprocessFile(appStoredFileId: number) {
-        const response = this.post<IBaseHttpResponseApi<any>>({ api: env, href: "/reprocess-file", params: { appStoredFileId } }, {})
-        return response
-    }
-
-    public async deleteFileWithError(appStoredFileId: number) {
-        const response = this.delete<IBaseHttpResponseApi<any>>({ api: env, href: "/delete-stored-file", params: { id: appStoredFileId } })
-        return response
-    }
-
-    public async checkProcessingStatus(request: ICheckAppStoredFileStatusRequest) {
-        const response = this.post<IBaseHttpResponseApi<any>>({ api: env, href: "/check-stored-file-status" }, request)
-        return response
-    }
-
-    public async checkAppFileStatus(request: ICheckAppFileStatusRequest) {
-        const response = this.post<IBaseHttpResponseApi<any>>({ api: env, href: "/check-app-file-status" }, request)
-        return response
     }
 
     public async deleteSoftDeletedItems() {

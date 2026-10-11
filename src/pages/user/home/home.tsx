@@ -24,11 +24,12 @@ import { useQuery } from 'react-toolkit'
 
 import AppFileItem from '../../../containers/app-file-item'
 import { saveService } from '../../../services/save-service'
-import { webSocketService } from '../../../services/web-socket-service'
 import { IAppFileRequest } from '../../../interfaces/IAppFileRequest'
 import { IAppFileResponse } from '../../../interfaces/IAppFileResponse'
 import { usePageContext } from '../../../contexts/page-context'
 
+// A group only has a name and its versioning here: the folder that feeds it, and when it is sent,
+// are set in the Gameout Driver of each PC.
 function AppFileForm({ data }: {
   data: {
     values: IAppFileResponse
@@ -40,44 +41,30 @@ function AppFileForm({ data }: {
 
   const initialState = useRef({
     name: data.values.name,
-    path: data.values.path,
     versionControl: data.values.versionControl,
-    observer: data.values.observer,
-    autoValidateSync: data.values.autoValidateSync,
     id: data.values.id
   })
 
   const appFileSchema = z.object({
     name: z.string().min(1),
-    path: z.string().min(1),
-    versionControl: z.string(),
-    observer: z.string(),
-    autoValidateSync: z.string()
+    versionControl: z.string()
   })
 
-  const { register, handleSubmit, watch, reset, formState } = useForm<z.infer<typeof appFileSchema>>({
+  const { register, handleSubmit, watch, reset } = useForm<z.infer<typeof appFileSchema>>({
     resolver: zodResolver(appFileSchema),
     defaultValues: {
       name: data.values.name,
-      path: data.values.path,
-      versionControl: data.values.versionControl.toString(),
-      observer: data.values.observer.toString(),
-      autoValidateSync: data.values.autoValidateSync.toString()
+      versionControl: data.values.versionControl.toString()
     }
   })
 
   function onSubmit(formData: z.infer<typeof appFileSchema>) {
     const request: IAppFileRequest = {
       name: formData.name,
-      path: formData.path,
-      versionControl: formData.versionControl == "true",
-      observer: formData.observer == "true",
-      autoValidateSync: formData.autoValidateSync == "true"
+      versionControl: formData.versionControl == "true"
     }
 
     data.setQuery(() => data.action(request, data.values.id).then(() => {
-      console.log('Saved successfully')
-
       setChanged(false)
 
       initialState.current = {
@@ -90,30 +77,16 @@ function AppFileForm({ data }: {
   function cancelChanges() {
     reset({
       name: initialState.current.name,
-      path: initialState.current.path,
-      versionControl: initialState.current.versionControl.toString(),
-      observer: initialState.current.observer.toString(),
-      autoValidateSync: initialState.current.autoValidateSync.toString()
+      versionControl: initialState.current.versionControl.toString()
     })
 
     setChanged(false)
   }
 
   useEffect(() => {
-    console.log(
-      initialState.current.name, watch('name'),
-      initialState.current.path, watch('path'),
-      initialState.current.versionControl.toString(), watch('versionControl'),
-      initialState.current.observer.toString(), watch('observer'),
-      initialState.current.autoValidateSync.toString(), watch('autoValidateSync')
-    )
-
     if (
       initialState.current.name !== watch('name') ||
-      initialState.current.path !== watch('path') ||
-      initialState.current.versionControl.toString() !== watch('versionControl') ||
-      initialState.current.observer.toString() !== watch('observer') ||
-      initialState.current.autoValidateSync.toString() !== watch('autoValidateSync')
+      initialState.current.versionControl.toString() !== watch('versionControl')
     ) {
       setChanged(true)
     }
@@ -126,12 +99,8 @@ function AppFileForm({ data }: {
     <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-3'>
       <div className='flex gap-3'>
         <InputRoot>
-          <Label >Name</Label>
+          <Label>Name</Label>
           <InputText className='w-full' {...register('name')} />
-        </InputRoot>
-        <InputRoot>
-          <Label>Path</Label>
-          <InputText className='w-full' {...register('path')} />
         </InputRoot>
       </div>
       <div className='flex gap-3'>
@@ -139,21 +108,12 @@ function AppFileForm({ data }: {
           <Checkbox data={"true"} {...register('versionControl')}>
             <Check />
           </Checkbox>
-          <Label>Versions</Label>
-        </InputRoot>
-        <InputRoot variation='checkbox'>
-          <Checkbox data={"true"} {...register('observer')}>
-            <Check />
-          </Checkbox>
-          <Label>Observer</Label>
-        </InputRoot>
-        <InputRoot variation='checkbox'>
-          <Checkbox data={"true"} {...register('autoValidateSync')}>
-            <Check />
-          </Checkbox>
-          <Label>Auto Check Status</Label>
+          <Label>Keep every version</Label>
         </InputRoot>
       </div>
+      <Span className='text-xs text-zinc-400'>
+        Off, each new upload replaces the previous version.
+      </Span>
       <div className='grid grid-cols-2 gap-3 mt-4 w-56'>
         <Button className='w-full' disabled={!changed} type='submit' >Save</Button>
         {changed &&
@@ -164,20 +124,27 @@ function AppFileForm({ data }: {
   )
 }
 
+function formatSize(bytes?: number | null) {
+  if (bytes == null) {
+    return ''
+  }
+
+  return `${(bytes / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
+}
+
 function Home() {
   const pageContext = usePageContext()
   const navigate = useNavigate()
   const [appFiles, setAppFiles] = useState<IAppFileResponse[]>([])
   const [filter, setFilter] = useState('')
   const [allRequestsResolved, setQuery] = useQuery(false)
-  const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({})
 
   const modalRefs = useRef<{ [key: number]: any }>({})
   const addModalRef = useRef<any>(null)
 
   const addFormSchema = z.object({
     name: z.string().nonempty("Campo obrigatório"),
-    path: z.string().nonempty("Campo obrigatório")
+    versionControl: z.string().optional()
   })
 
   const { handleSubmit: handleAddSubmit, formState: { errors: addErrors }, register: addRegister, reset: resetAddForm } = useForm<z.infer<typeof addFormSchema>>({
@@ -187,45 +154,40 @@ function Home() {
   function handleAddSave(data: z.infer<typeof addFormSchema>) {
     const saveItem: IAppFileRequest = {
       name: data.name,
-      observer: false,
-      path: data.path,
-      versionControl: false,
-      autoValidateSync: false
+      versionControl: data.versionControl == "true"
     }
 
     setQuery(() => saveService.add(saveItem)
       .then(() => {
-        toast.success('File added successfully')
+        toast.success('Group added. Pick its folder in the Gameout Driver.')
         resetAddForm()
         addModalRef.current?.close()
         handleGetSaves()
       })
       .catch(() => {
-        toast.error('Failed to add file')
+        toast.error('Failed to add group')
       }))
-  } function handleGetSaves() {
+  }
+
+  function handleGetSaves() {
     return saveService.getAll().then(e => {
-      setAppFiles(prev =>
-        e.data.map(item => {
-          const old = prev.find(p => p.id === item.id)
-          return old ? { ...old, ...item } : item
-        })
-      )
+      setAppFiles(e.data)
     })
   }
 
   function handleUpdate(data: IAppFileRequest, id: number) {
     return saveService.update(data, id).then(() => {
-      toast.success('Save updated')
+      toast.success('Group updated')
+      handleGetSaves()
     })
   }
 
   function handleDeleteSave(id: number) {
     return saveService.remove({ id }).then(() => {
-      toast.success('File deleted successfully')
+      toast.success('Group deleted successfully')
       handleGetSaves()
     }).catch(() => {
-      toast.error('Failed to delete file')
+      toast.error('Failed to delete group')
     })
   }
 
@@ -233,82 +195,9 @@ function Home() {
     navigate(`/versions/${id}`)
   }
 
-  function handleSingleSync(idAppFile: number) {
-    return saveService.singleSync({ idAppFile }).then(() => {
-      toast.success('Sync started successfully')
-      handleGetSaves()
-    }).catch(() => {
-      toast.error('Failed to start sync')
-    })
-  }
-
-  function handleValidateStatus(appFileId: number) {
-    return saveService.checkAppFileStatus({ appFileId })
-      .then(() => {
-        toast.success('Status check initiated for file')
-      })
-      .catch(() => {
-        toast.error('Failed to check status')
-      })
-  }
-
   function handleAppFileFilter() {
-    return appFiles.filter(e => e.name.includes(filter))
+    return appFiles.filter(e => e.name.toLowerCase().includes(filter.toLowerCase()))
   }
-
-  useEffect(() => {
-    function refresh() {
-      handleGetSaves()
-    }
-
-    function handleUploadProgress(data: any) {
-      console.log('Upload Progress Event:', data)
-
-      const { AppFileId, ProgressPercentage, IsComplete } = data.Body || {}
-
-      console.log('Parsed values:', { AppFileId, ProgressPercentage, IsComplete })
-
-      if (AppFileId === undefined || ProgressPercentage === undefined) {
-        console.warn('Missing required data')
-
-        return
-      }
-
-      setUploadProgress(prev => {
-        const updated = {
-          ...prev,
-          [AppFileId]: ProgressPercentage
-        }
-        console.log('Updated progress state:', updated)
-        return updated
-      })
-
-      if (IsComplete) {
-        console.log('Upload completed for AppFileId:', AppFileId)
-
-        setTimeout(() => {
-          setUploadProgress(prev => {
-            const newProgress = { ...prev }
-            delete newProgress[AppFileId]
-            console.log('Cleared progress for AppFileId:', AppFileId)
-            return newProgress
-          })
-        }, 2000)
-      }
-    }
-
-    webSocketService.on('NewsFilesRequestPing', refresh)
-    webSocketService.on('AppFileUpdatedPing', refresh)
-    webSocketService.on('AppFileStatusUpdatePing', refresh)
-    webSocketService.on('AppFileUploadProgress', handleUploadProgress)
-
-    return () => {
-      webSocketService.off('NewsFilesRequestPing', refresh)
-      webSocketService.off('AppFileUpdatedPing', refresh)
-      webSocketService.off('AppFileStatusUpdatePing', refresh)
-      webSocketService.off('AppFileUploadProgress', handleUploadProgress)
-    }
-  }, [])
 
   useEffect(() => {
     pageContext.setContextPage({ pageTitle: 'Home' })
@@ -332,7 +221,7 @@ function Home() {
           onChange={e => setFilter(e.target.value)}
         />
         <div className='flex-1'></div>
-        <Button className='min-w-11 min-h-11' onClick={handleGetSaves}>
+        <Button className='min-w-11 min-h-11' onClick={() => setQuery(() => handleGetSaves())}>
           <RefreshCcw className='h-4 w-4' />
         </Button>
         <Button className='min-w-11 min-h-11' onClick={() => addModalRef.current?.open()}>
@@ -342,18 +231,22 @@ function Home() {
       <ModalContext ref={addModalRef}>
         <ModalRoot>
           <div className='shadow-lg p-6 bg-main-black-800 flex flex-col gap-3 rounded text-white'>
-            <h3 className='text-lg font-semibold'>Add New Save</h3>
+            <h3 className='text-lg font-semibold'>Add New Group</h3>
             <Form onSubmit={handleAddSubmit(handleAddSave)}>
               <InputRoot>
                 <Label>Name</Label>
                 <InputText {...addRegister("name")} className='w-full' placeholder='Save name' />
                 <Span variation='error'>{addErrors.name?.message}</Span>
               </InputRoot>
-              <InputRoot>
-                <Label>Path</Label>
-                <InputText {...addRegister("path")} className='w-full' placeholder='Save path' />
-                <Span variation='error'>{addErrors.path?.message}</Span>
+              <InputRoot variation='checkbox'>
+                <Checkbox data={"true"} {...addRegister('versionControl')}>
+                  <Check />
+                </Checkbox>
+                <Label>Keep every version</Label>
               </InputRoot>
+              <Span className='text-xs text-zinc-400'>
+                The folder is chosen in the Gameout Driver of each PC.
+              </Span>
               <div className='flex justify-between w-full mt-6 gap-3'>
                 <Button type='submit' className='flex-1'>Save</Button>
                 <ModalClose className='flex-1'>
@@ -382,25 +275,16 @@ function Home() {
                           name={x.name}
                           createDate={x.createDate}
                           updateDate={x.updateDate}
-                          processing={false}
+                          processing={x.status == 2}
                           message={x.statusMessage}
                           status={x.status}
                         />
-                        {x.status == 2 && (
-                          <div className='w-full flex flex-col gap-2'>
-                            <div className='flex justify-between text-xs text-zinc-400'>
-                              {uploadProgress[x.id] > 0 ? <span>Fazendo upload</span> : <span>Buscando informações</span>}
-                              {uploadProgress[x.id] > 0 && <span>{uploadProgress[x.id]}%</span>}
-                            </div>
-                            <div className='w-full bg-zinc-700 rounded-full h-2'>
-                              <div
-                                aria-busy={uploadProgress[x.id] == null}
-                                className='bg-blue-500 h-2 rounded-full transition-all duration-300 aria-busy:animate-pulse aria-busy:bg-gray-300'
-                                style={{ width: `${uploadProgress[x.id]}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        )}
+                        <span className='text-xs text-zinc-400'>
+                          {x.lastSyncedAt
+                            ? `Last version ${new Date(x.lastSyncedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${formatSize(x.lastSyncedSize)}`
+                            : 'No versions yet'}
+                          {x.versionControl && ' · keeps every version'}
+                        </span>
                       </div>
                     </Div>
                   </AccordionTitle>
@@ -416,7 +300,7 @@ function Home() {
                     <div className='shadow-lg p-6 bg-main-black-800 flex flex-col gap-3 rounded text-white'>
                       <h3 className='text-lg font-semibold'>Confirm Deletion</h3>
                       <p className='text-sm text-gray-300'>
-                        Are you sure you want to delete this file?
+                        Are you sure you want to delete this group and its versions?
                       </p>
                       <div className='flex justify-between w-full mt-6 gap-3'>
                         <ModalClose callback={() => setQuery(() => handleDeleteSave(x.id))} className='flex-1'>
@@ -441,15 +325,9 @@ function Home() {
                     </div>
                     <div className='w-full flex flex-col'>
                       <Span className='w-full' variation='divisor'>Actions</Span>
-                      <div className='grid grid-cols-3 gap-3 md:grid flex-wrap w-96'>
-                        <Button onClick={() => handleValidateStatus(x.id)} >
-                          Check status
-                        </Button>
+                      <div className='grid grid-cols-1 gap-3 w-32'>
                         <Button onClick={() => handleNavigateToVersions(x.id)} >
                           Versions
-                        </Button>
-                        <Button onClick={() => handleSingleSync(x.id)} >
-                          Sync
                         </Button>
                       </div>
                     </div>
