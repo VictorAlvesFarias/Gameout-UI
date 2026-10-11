@@ -126,12 +126,28 @@ function AppFileForm({ data }: {
   )
 }
 
+// Same format as the dates of AppFileItem, right above.
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
 function formatSize(bytes?: number | null) {
   if (bytes == null) {
     return ''
   }
 
-  return `${(bytes / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  }
+
+  return `${(bytes / 1024 / 1024).toLocaleString('en-US', { maximumFractionDigits: 1 })} MB`
 }
 
 function Home() {
@@ -272,7 +288,7 @@ function Home() {
                 <Div variation='accordion-title-root'>
                   <AccordionTitle>
                     <Div variation='accordion-content'>
-                      <div className='flex flex-col gap-3'>
+                      <div className='flex flex-col gap-1'>
                         <AppFileItem
                           name={x.name}
                           createDate={x.createDate}
@@ -281,9 +297,9 @@ function Home() {
                           message={x.statusMessage}
                           status={x.status}
                         />
-                        <span className='text-xs text-zinc-400'>
+                        <span className='text-xs text-gray-400'>
                           {x.lastSyncedAt
-                            ? `Last version ${new Date(x.lastSyncedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${formatSize(x.lastSyncedSize)}`
+                            ? `Last version: ${formatDate(x.lastSyncedAt)} · ${formatSize(x.lastSyncedSize)}`
                             : 'No versions yet'}
                           {x.versionControl && ' · keeps every version'}
                         </span>
