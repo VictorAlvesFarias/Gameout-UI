@@ -35,6 +35,7 @@ function AppFileForm({ data }: {
     values: IAppFileResponse
     setQuery: Function
     action: Function
+    onVersions: () => void
   }
 }) {
   const [changed, setChanged] = useState(false)
@@ -111,13 +112,14 @@ function AppFileForm({ data }: {
           <Label>Keep every version</Label>
         </InputRoot>
       </div>
-      <Span className='text-xs text-zinc-400'>
+      <p className='text-xs text-zinc-400'>
         Off, each new upload replaces the previous version.
-      </Span>
-      <div className='grid grid-cols-2 gap-3 mt-4 w-56'>
-        <Button className='w-full' disabled={!changed} type='submit' >Save</Button>
+      </p>
+      <div className='flex gap-3 mt-4'>
+        <Button className='w-28' type='button' onClick={data.onVersions}>Versions</Button>
+        <Button className='w-28' disabled={!changed} type='submit'>Save</Button>
         {changed &&
-          <Button className='w-full' variation='red' disabled={!changed} type='button' onClick={cancelChanges}>Cancel</Button>
+          <Button className='w-28' variation='red' disabled={!changed} type='button' onClick={cancelChanges}>Cancel</Button>
         }
       </div>
     </form>
@@ -244,9 +246,9 @@ function Home() {
                 </Checkbox>
                 <Label>Keep every version</Label>
               </InputRoot>
-              <Span className='text-xs text-zinc-400'>
+              <p className='text-xs text-zinc-400'>
                 The folder is chosen in the Gameout Driver of each PC.
-              </Span>
+              </p>
               <div className='flex justify-between w-full mt-6 gap-3'>
                 <Button type='submit' className='flex-1'>Save</Button>
                 <ModalClose className='flex-1'>
@@ -316,20 +318,12 @@ function Home() {
                 <Accordion>
                   <Div variation='accordion-content'>
                     <div className='w-full flex flex-col'>
-                      <Span className='w-full' variation='divisor'>Settings</Span>
                       <AppFileForm data={{
                         values: x,
                         action: handleUpdate,
-                        setQuery: setQuery
+                        setQuery: setQuery,
+                        onVersions: () => handleNavigateToVersions(x.id)
                       }} />
-                    </div>
-                    <div className='w-full flex flex-col'>
-                      <Span className='w-full' variation='divisor'>Actions</Span>
-                      <div className='grid grid-cols-1 gap-3 w-32'>
-                        <Button onClick={() => handleNavigateToVersions(x.id)} >
-                          Versions
-                        </Button>
-                      </div>
                     </div>
                   </Div>
                 </Accordion>
