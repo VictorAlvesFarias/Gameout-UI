@@ -11,11 +11,19 @@ import { loginService } from './services/login-service';
 import { AUTH } from './config/auth-config';
 import { AuthenticationService } from 'typescript-toolkit'
 import { PageProvider } from './contexts/page-context';
+import { installSessionInterceptors, refreshSession } from './services/session-service';
 
 function App() {
   const token = Cookies.get('token');
   const permissions = Cookies.get('claims');
-  const expirationDate: any = Cookies.get("expectedExpirationTokenDateTime")
+  // The session lasts as long as the refresh token; the access token is renewed from it. Capped:
+  // setTimeout (used by validateSession) fires at once for delays over 2^31-1 ms (~24.8 days).
+  const sessionEnd = Date.parse(Cookies.get("refreshTokenExpirationDateTime") ?? Cookies.get("expectedExpirationTokenDateTime") ?? "")
+  const expirationDate: any = isNaN(sessionEnd) ? undefined : new Date(Math.min(sessionEnd, Date.now() + 2147483647))
+
+  installSessionInterceptors(() => {
+    window.location.href = '/login'
+  })
 
   function onInit(props: IAuthContextType) {
     AuthenticationService.validateSession(
@@ -30,13 +38,26 @@ function App() {
         }
 
         if (event == "logout") {
-          window.location.pathname = '/login'
-          loginService.logout()
+          if (!Cookies.get("refreshToken")) {
+            loginService.logout()
 
-          props.setIsAuthenticated?.(false)
-          props.setPermissions?.(null)
+            props.setIsAuthenticated?.(false)
+            props.setPermissions?.(null)
 
-          return false
+            return false
+          }
+
+          // Expiry reached: a valid refresh token still keeps the session going.
+          refreshSession().then(newToken => {
+            if (!newToken) {
+              loginService.logout()
+
+              props.setIsAuthenticated?.(false)
+              props.setPermissions?.(null)
+            }
+          })
+
+          return true
         }
 
         if (event == "not-required") {

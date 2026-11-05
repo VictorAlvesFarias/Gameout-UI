@@ -2,6 +2,7 @@ import axios from "axios";
 import { env } from "../environment";
 import { BaseHttpService, catchErrors } from "typescript-toolkit";
 import Cookies from "js-cookie";
+import { saveSession, signOut } from "./session-service";
 
 class LoginService extends BaseHttpService {
   constructor() {
@@ -23,17 +24,8 @@ class LoginService extends BaseHttpService {
       accessKey: data.accessKey,
       password: data.password
     }).then(({ data }) => {
-
-      const keys = Object.keys(data)
-
-      keys.forEach(e => {
-        if (typeof data[e] == "object") {
-          Cookies.set(e, JSON.stringify(data[e]), { expires: Number(data.expirationTimetoken) })
-        }
-        else {
-          Cookies.set(e, data[e], { expires: Number(data.expirationTimetoken) })
-        }
-      })
+      // Cookies last as long as the refresh token: the access token is renewed from it.
+      saveSession(data)
 
       Cookies.set("type", "web")
 
@@ -43,13 +35,10 @@ class LoginService extends BaseHttpService {
     return result;
   }
   public logout() {
-    const keys = Object.keys(Cookies.get())
-
-    keys.forEach(e => {
-      Cookies.remove(e)
+    // Revokes the refresh token on the API and clears the cookies.
+    void signOut().finally(() => {
+      window.location.href = '/login'
     })
-
-    window.location.href = '/login'
   }
 }
 
